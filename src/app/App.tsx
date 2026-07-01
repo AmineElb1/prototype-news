@@ -1,9 +1,8 @@
 import React, { useState, useRef, useCallback } from "react";
-import { ChameleonProvider, DefaultTeaser, Logo } from "@chameleon/react";
+import { ChameleonProvider, DefaultTeaser, Logo, BrandedHeading } from "@chameleon/react";
 import { Newspaper, CirclePlay, Headphones, Menu as MenuIcon, User } from "lucide-react";
 import MobileV from "@/imports/MobileV2/index";
 import svgPaths from "@/imports/MobileV2/svg-dqhalv9jru";
-import imgPremiumToken from "@/imports/MobileV2/4ae3cfeb2483acc1f6b1f7d65efb5956419dd8d2.png";
 
 // Placeholder images reused from the Figma import asset pool
 import img0  from "@/imports/MobileV2/941fdb80140d5a65b39255b5f432f035bba86d80.png";
@@ -215,36 +214,6 @@ const FEEDS: Record<string, Storyblock[]> = {
 
 // ─── Storyblock primitives ────────────────────────────────────────────────────
 
-/** Full-width 16:9 hero image placeholder — matches Figma import ImageProp style */
-function HeroImage({ imgIdx }: { imgIdx: number }) {
-  return (
-    <div className="content-stretch flex items-start relative shrink-0 w-full" data-name="Image Prop">
-      <div className="content-stretch flex flex-[1_0_0] flex-col items-start min-w-px overflow-clip relative">
-        <div aria-hidden className="absolute inset-0 pointer-events-none">
-          <div className="absolute bg-[#e0e0e0] inset-0" />
-          <img alt="" className="absolute max-w-none object-cover size-full" src={IMGS[imgIdx % IMGS.length]} />
-        </div>
-        {/* 16:9 aspect ratio spacer — same pattern as AspectRatioKeeperRotatedAutoLayout */}
-        <div className="content-stretch flex flex-col items-start overflow-clip relative shrink-0 w-full">
-          <div style={{ paddingTop: "66.67%", width: "100%" }} />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/** Full-width image for grid items (4:3) */
-function GridImage({ imgIdx }: { imgIdx: number }) {
-  return (
-    <div className="content-stretch flex flex-col items-start overflow-clip relative shrink-0 w-full" style={{ background: "#e0e0e0" }}>
-      <div className="absolute inset-0">
-        <img alt="" className="absolute max-w-none object-cover size-full" src={IMGS[imgIdx % IMGS.length]} />
-      </div>
-      <div style={{ paddingTop: "66.67%", width: "100%" }} />
-    </div>
-  );
-}
-
 /** Matches the Divider/Mobile SVG pattern from the import */
 function SectionDivider() {
   return (
@@ -277,57 +246,24 @@ function FullDivider() {
   );
 }
 
-/** Premium inline token — reuses imgPremiumToken from the import */
-function PremiumToken() {
-  return (
-    <span className="inline-flex items-center shrink-0 mr-[4px]">
-      <img alt="premium" src={imgPremiumToken} style={{ height: 14, width: "auto", display: "block" }} />
-    </span>
-  );
-}
-
-/** Category label — matches the Taxonomy typography from the import */
-function CategoryLabel({ label }: { label: string }) {
-  return (
-    <span
-      className="[word-break:break-word] font-['Libre_Franklin:SemiBold',sans-serif] font-semibold leading-[1.2] text-[#666] text-[12px] uppercase tracking-[0.04em]"
-    >
-      {label}
-    </span>
-  );
-}
-
 // ─── Storyblock renderers ─────────────────────────────────────────────────────
 
 /**
- * LargeTeaser__Mobile — full-width hero image with Arnhem title below.
- * Mirrors: CustomStoryblock > HeroZone > LargeTeaser__Mobile > DefaultTeaser + Body
+ * LargeTeaser__Mobile — full-width hero image with title below.
+ * Uses Chameleon's DefaultTeaser, orientation="vertical" size="lg", `ds` theme tokens.
  */
 function HeroStoryblock({ block }: { block: HeroBlock }) {
   return (
-    <div className="bg-[rgba(255,255,255,0)] content-stretch flex flex-col items-center relative shrink-0" data-name="CustomStoryblock/Mobile">
-      <div className="content-stretch flex flex-col items-start relative shrink-0" data-name="HeroZone/Mobile">
-        <div className="content-stretch flex flex-col items-start relative shrink-0" data-name="LargeTeaser__Mobile">
-          <div className="content-stretch flex flex-col items-start relative shrink-0 w-full" data-name="DefaultTeaser">
-            <HeroImage imgIdx={block.img} />
-            {/* Body — matches pb-[20px] pt-[12px] px-[16px] from import */}
-            <div className="bg-[rgba(255,255,255,0)] relative shrink-0 w-full" data-name="Body">
-              <div className="content-stretch flex flex-col items-start pb-[20px] pt-[12px] px-[16px] relative size-full">
-                {/* Taxonomy */}
-                <div className="content-center flex flex-wrap gap-0 items-center relative shrink-0 w-full" data-name="Taxonomy">
-                  {block.premium && <PremiumToken />}
-                  <CategoryLabel label={block.category} />
-                </div>
-                {/* Title — Arnhem:SemiBold 24px with indent-[26px] from import's Title() */}
-                <p className="[word-break:break-word] font-['Arnhem',_'Arnhem_Fallback',_serif] font-semibold indent-[26px] leading-[1.1] min-w-full not-italic relative shrink-0 text-[24px] text-black mt-[6px]">
-                  {block.title}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    <DefaultTeaser
+      link="#"
+      title={block.title}
+      label={block.category}
+      premium={block.premium}
+      orientation="vertical"
+      size="lg"
+      inset
+      image={<img src={IMGS[block.img % IMGS.length]} alt="" />}
+    />
   );
 }
 
@@ -366,19 +302,17 @@ function GridStoryblock({ block }: { block: GridBlock }) {
         <React.Fragment key={rowIdx}>
           <div className="content-stretch flex gap-[16px] items-start p-[16px] relative shrink-0 w-full">
             {pair.map((item, colIdx) => (
-              <div key={colIdx} className="content-stretch flex items-start relative shrink-0 flex-1 min-w-0" data-name="GridImageTeaser__Mobile">
-                <div className="content-stretch flex flex-[1_0_0] flex-col items-start min-w-px relative" data-name="DefaultTeaser">
-                  <GridImage imgIdx={item.img} />
-                  <div className="content-stretch flex flex-col items-start pt-[8px] pb-[4px] relative shrink-0 w-full">
-                    <div className="content-center flex flex-wrap gap-0 items-center relative shrink-0 w-full mb-[3px]">
-                      {item.premium && <PremiumToken />}
-                      <CategoryLabel label={item.category} />
-                    </div>
-                    <p className="[word-break:break-word] font-['Arnhem',_'Arnhem_Fallback',_serif] font-semibold leading-[1.2] relative shrink-0 text-[15px] text-black">
-                      {item.title}
-                    </p>
-                  </div>
-                </div>
+              <div key={colIdx} className="content-stretch flex items-start relative shrink-0 flex-1 min-w-0 overflow-hidden" data-name="GridImageTeaser__Mobile">
+                <DefaultTeaser
+                  link="#"
+                  title={item.title}
+                  label={item.category}
+                  premium={item.premium}
+                  orientation="vertical"
+                  size="sm"
+                  style={{ width: "100%", minWidth: 0 }}
+                  image={<img src={IMGS[item.img % IMGS.length]} alt="" style={{ width: "100%" }} />}
+                />
               </div>
             ))}
           </div>
@@ -410,15 +344,12 @@ function BrandedStoryblock({ block }: { block: BrandedBlock }) {
       style={{ background: block.color }}
       data-name="Regular4"
     >
-      {/* Branded heading */}
+      {/* Branded heading — Chameleon's BrandedHeading, nested dark colorMode so its
+          adaptive text-color token resolves to white against the colored panel */}
       <div className="content-stretch flex flex-col items-start relative shrink-0 w-[calc(100%-32px)]" data-name="BrandedHeading__Mobile">
-        <div className="content-stretch flex flex-col items-center relative shrink-0 w-full" data-name="BrandedHeading">
-          <div className="bg-[rgba(255,255,255,0)] content-stretch flex gap-[4px] items-center py-[12px] relative shrink-0 w-full" data-name="Branded Heading">
-            <p className="[word-break:break-word] flex flex-col font-['Libre_Franklin:SemiBold',sans-serif] font-semibold justify-center leading-[1.15] relative shrink-0 text-[18px] text-white whitespace-nowrap">
-              {block.heading}
-            </p>
-          </div>
-        </div>
+        <ChameleonProvider theme="ds" colorMode="dark" as="div">
+          <BrandedHeading size="lg">{block.heading}</BrandedHeading>
+        </ChameleonProvider>
       </div>
       {/* Articles list */}
       {block.articles.map((article, i) => (
@@ -578,22 +509,23 @@ function BottomNav() {
           padding: "var(--scale-5) var(--scale-2)",
         }}
       >
-        {BOTTOM_TABS.map(({ label, icon: TabIcon, isBrand }) => {
+        {BOTTOM_TABS.map(({ label, icon: TabIcon, isBrand }, i) => {
           const active = label === activeTab;
           const color = active ? "#1a1a1a" : "#666";
           return (
             <button
               key={label}
               onClick={() => setActiveTab(label)}
-              style={{ flex: 1, display: "flex", justifyContent: "center", minWidth: 0, border: "none", background: "transparent", cursor: "pointer", padding: 0 }}
+              style={{ flex: 1, display: "flex", justifyContent: "center", minWidth: 0, border: "none", background: "transparent", cursor: "pointer", padding: 0, marginLeft: i === 0 ? "var(--scale-5)" : 0, marginRight: i === BOTTOM_TABS.length - 1 ? "var(--scale-5)" : 0 }}
             >
               <div
                 style={{
+                  width: "100%",
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "center",
                   gap: "var(--scale-2)",
-                  padding: "5px var(--scale-4)",
+                  padding: "8px var(--scale-5)",
                   borderRadius: 14,
                   background: active ? "rgba(0,0,0,0.08)" : "transparent",
                   transition: "background 0.15s ease",

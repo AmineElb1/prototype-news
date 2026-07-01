@@ -202,9 +202,51 @@
   inset: 0;
   z-index: -1;
   border-radius: inherit;
-  background: rgba(255, 255, 255, 0.6);
+  background: rgba(230, 230, 230, 0.75);
   backdrop-filter: blur(14px) url(#liquid-glass-distortion);
   -webkit-backdrop-filter: blur(14px) url(#liquid-glass-distortion);
   overflow: hidden;
   isolation: isolate;
+}
+
+/*
+ * Figma-export quirk (src/imports/MobileV2): single-edge borders are represented
+ * by setting the other three sides to 0.001px instead of 0. Browsers round that
+ * sub-pixel value up to a visible 1px line, turning an intended top-only divider
+ * into a full rectangle border. Force those sides to a true zero.
+ */
+.border-b-\[0\.001px\] {
+  border-bottom-width: 0 !important;
+}
+.border-l-\[0\.001px\] {
+  border-left-width: 0 !important;
+}
+.border-r-\[0\.001px\] {
+  border-right-width: 0 !important;
+}
+
+/*
+ * "Van Hool" branded section (src/imports/MobileV2, TopStories1) is the only
+ * branded panel using a horizontally-scrolling card row instead of the static
+ * 2-column grid. Its cards sit too tight against each other and the trailing
+ * edge — widen the gap between them.
+ */
+.flex.gap-\[16px\].items-start.pb-\[16px\].px-\[16px\] {
+  margin-left: 16px !important;
+  gap: 24px !important;
+}
+
+/*
+ * Chameleon teasers/BrandedHeading render their link wrapper as a plain <a>
+ * and rely on the consuming app to reset default browser link styling (color,
+ * underline). We don't have a global reset, so it was bleeding through as
+ * blue/underlined text instead of the design system's own text-color tokens.
+ */
+[data-chameleon-theme] a,
+[data-chameleon-theme] a:hover,
+[data-chameleon-theme] a:visited,
+[data-chameleon-theme] a:active,
+[data-chameleon-theme] a:focus {
+  color: inherit !important;
+  text-decoration: none !important;
 }
