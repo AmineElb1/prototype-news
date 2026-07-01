@@ -434,12 +434,12 @@ function MainNav() {
     <div style={{ height: MAINNAV_H, display: "flex", alignItems: "center", justifyContent: "space-between", paddingLeft: 16, paddingRight: 16, background: "#fff", gap: 12 }}>
       <Logo name="logo-main" style={{ height: 22, width: "auto" }} />
       <div style={{ flex: 1 }} />
-      <div style={{ borderRadius: 999, background: "var(--color-primary-base)", padding: "8px 13px", flexShrink: 0 }}>
+      <div className="liquid-glass-border" style={{ borderRadius: 999, background: "var(--color-primary-base)", padding: "8px 13px", flexShrink: 0 }}>
         <span style={{ fontFamily: '"Libre Franklin", sans-serif', fontWeight: 600, fontSize: 14, lineHeight: 1.1, color: "#fff", whiteSpace: "nowrap" }}>
           Abonneren
         </span>
       </div>
-      <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#f2f2f2", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+      <div className="liquid-glass-border--gray" style={{ width: 32, height: 32, borderRadius: "50%", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
         <User size={18} color="#1a1a1a" strokeWidth={2} />
       </div>
     </div>
@@ -511,7 +511,7 @@ function BottomNav() {
       >
         {BOTTOM_TABS.map(({ label, icon: TabIcon, isBrand }, i) => {
           const active = label === activeTab;
-          const color = active ? "#1a1a1a" : "#666";
+          const color = active ? "var(--color-primary-base)" : "#000";
           return (
             <button
               key={label}
