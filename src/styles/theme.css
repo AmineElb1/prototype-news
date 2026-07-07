@@ -227,11 +227,14 @@
   z-index: -1;
   border-radius: inherit;
   background: rgba(230, 230, 230, 0.75);
-  backdrop-filter: blur(14px) url(#liquid-glass-distortion);
-  -webkit-backdrop-filter: blur(14px) url(#liquid-glass-distortion);
   overflow: hidden;
   isolation: isolate;
 }
+/* The backdrop-filter's url(#liquid-glass-distortion) reference is set from an inline <style> tag
+   (see LiquidGlassFilter in App.tsx) instead of here. Fragment URLs in CSS resolve against the
+   stylesheet's own location, not the page's — fine in dev where Vite injects this file inline, but
+   in a production build this file is extracted to its own external .css, so the browser looks for
+   the SVG filter there instead of in the document and silently finds nothing. */
 
 /*
  * Figma-export quirk (src/imports/MobileV2): single-edge borders are represented
@@ -272,5 +275,18 @@
 [data-chameleon-theme] a:active,
 [data-chameleon-theme] a:focus {
   color: inherit !important;
+  text-decoration: none !important;
+}
+
+/*
+ * TeaserContent (used by every DefaultTeaser article title, on this page and inside
+ * src/imports/MobileV2) underlines its own title span on hover/active via a hardcoded
+ * `text-decoration: underline` targeting that span directly — the reset above only clears
+ * text-decoration on the <a> itself, which doesn't affect a separately-targeted descendant.
+ * Vite hashes that span's CSS-module class name, so match on a "contains" attribute
+ * selector instead of the exact hash.
+ */
+[data-chameleon-theme] a:any-link:hover [class*="teaser-content__title__title"],
+[data-chameleon-theme] a:any-link:active [class*="teaser-content__title__title"] {
   text-decoration: none !important;
 }

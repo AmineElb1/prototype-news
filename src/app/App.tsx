@@ -479,13 +479,23 @@ const BOTTOM_TABS: { label: string; icon?: typeof Newspaper; isBrand?: boolean }
 
 function LiquidGlassFilter() {
   return (
-    <svg style={{ position: "absolute", width: 0, height: 0 }} aria-hidden="true">
-      <filter id="liquid-glass-distortion" x="-20%" y="-20%" width="140%" height="140%">
-        <feTurbulence type="fractalNoise" baseFrequency="0.008 0.008" numOctaves={2} seed={92} result="noise" />
-        <feGaussianBlur in="noise" stdDeviation="0.02" result="blur" />
-        <feDisplacementMap in="SourceGraphic" in2="blur" scale={16} xChannelSelector="R" yChannelSelector="G" />
-      </filter>
-    </svg>
+    <>
+      <svg style={{ position: "absolute", width: 0, height: 0 }} aria-hidden="true">
+        <filter id="liquid-glass-distortion" x="-20%" y="-20%" width="140%" height="140%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.008 0.008" numOctaves={2} seed={92} result="noise" />
+          <feGaussianBlur in="noise" stdDeviation="0.02" result="blur" />
+          <feDisplacementMap in="SourceGraphic" in2="blur" scale={16} xChannelSelector="R" yChannelSelector="G" />
+        </filter>
+      </svg>
+      {/* Inline (not in theme.css) so url(#liquid-glass-distortion) resolves against this document
+          even in a production build, where theme.css is extracted to its own external file. */}
+      <style>{`
+        .liquid-glass::after {
+          backdrop-filter: blur(14px) url(#liquid-glass-distortion);
+          -webkit-backdrop-filter: blur(14px) url(#liquid-glass-distortion);
+        }
+      `}</style>
+    </>
   );
 }
 
@@ -551,6 +561,7 @@ function BottomNav() {
 export default function App() {
   const [activeIndex, setActiveIndex]       = useState(0);
   const [headerCollapsed, setHeaderCollapsed] = useState(false);
+  const [pagerFrozen, setPagerFrozen]       = useState(false);
 
   const isAnimatingRef  = useRef(false);
   const activeIndexRef  = useRef(0);
@@ -559,6 +570,16 @@ export default function App() {
   const feedsRef      = useRef<HTMLDivElement>(null);
   const topicsBarRef  = useRef<HTMLDivElement>(null);
   const topicBtnRefs  = useRef<(HTMLButtonElement | null)[]>([]);
+
+  // Trackpad two-finger horizontal swipe. Scrolling itself stays 100% native (smooth, no JS in the
+  // loop) — we only step in the instant a page boundary is crossed, to freeze the container until
+  // this gesture ends. See handleWheel / handleFeedsScroll below.
+  const wheelRef = useRef({
+    active: false,
+    startIndex: 0,
+    locked: false,
+    timeoutId: null as ReturnType<typeof setTimeout> | null,
+  });
 
   const navTranslateY = headerCollapsed ? -MAINNAV_H : 0;
   const feedTop       = headerCollapsed ? CHROME_COLLAPSED : CHROME_EXPANDED;
@@ -576,20 +597,73 @@ export default function App() {
     bar.scrollTo({ left: target, behavior: "smooth" });
   }, []);
 
+  // Tapping a chip can jump several topics away, so it bypasses scroll-snap entirely (instant
+  // reposition) rather than animating — animating a multi-page jump would otherwise visibly stop
+  // at every topic in between, since each one has scroll-snap-stop: always (see the pane below).
   const goToTopic = useCallback((index: number) => {
     if (index === activeIndexRef.current || isAnimatingRef.current) return;
     isAnimatingRef.current = true;
     setActiveIndex(index);
     scrollTopicIntoView(index);
-    feedsRef.current?.scrollTo({ left: index * (feedsRef.current?.offsetWidth ?? PHONE_W), behavior: "smooth" });
-    setTimeout(() => { isAnimatingRef.current = false; }, 450);
+    feedsRef.current?.scrollTo({ left: index * (feedsRef.current?.offsetWidth ?? PHONE_W), behavior: "auto" });
+    setTimeout(() => { isAnimatingRef.current = false; }, 50);
   }, [scrollTopicIntoView]);
 
+  // Ends the current trackpad gesture: unfreezes the container (if a page-cross locked it) so the
+  // next swipe can scroll again.
+  const endWheelGesture = useCallback(() => {
+    const w = wheelRef.current;
+    w.active = false;
+    w.timeoutId = null;
+    if (w.locked) {
+      w.locked = false;
+      setPagerFrozen(false);
+    }
+  }, []);
+
+  // Marks a new gesture on the first horizontal wheel tick after idle, and keeps pushing out the
+  // idle timeout while ticks keep arriving — including the ones we're ignoring once locked, so the
+  // decaying tail of a fast swipe's momentum doesn't unlock things early. Never touches scrollLeft
+  // itself: the actual motion stays fully native so it's exactly as smooth as an un-clamped swipe.
+  const handleWheel = useCallback((e: WheelEvent) => {
+    if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return; // vertical intent — let the pane scroll natively
+    const w = wheelRef.current;
+    if (!w.active) {
+      w.active = true;
+      w.startIndex = activeIndexRef.current;
+      w.locked = false;
+    } else if (w.timeoutId !== null) {
+      clearTimeout(w.timeoutId);
+    }
+    w.timeoutId = setTimeout(endWheelGesture, 150);
+  }, [endWheelGesture]);
+
+  // Fires on every native scroll tick (touch swipe, trackpad swipe, or programmatic). During an
+  // active trackpad gesture, the instant scrollLeft reaches a full page away from where the
+  // gesture started, we snap exactly onto that page and freeze the container (overflow: hidden)
+  // for the rest of the gesture — so a hard/fast trackpad fling can only ever land one page over,
+  // while everything up to that point scrolled 100% natively (no lag, no fighting the browser).
   const handleFeedsScroll = useCallback(() => {
-    if (isAnimatingRef.current) return;
     const feeds = feedsRef.current;
     if (!feeds) return;
-    const index = Math.round(feeds.scrollLeft / feeds.offsetWidth);
+    const width = feeds.offsetWidth;
+    const w = wheelRef.current;
+
+    if (w.active && !w.locked) {
+      const delta = feeds.scrollLeft - w.startIndex * width;
+      if (Math.abs(delta) >= width - 1) {
+        const target = Math.max(0, Math.min(TOPICS.length - 1, w.startIndex + (delta > 0 ? 1 : -1)));
+        w.locked = true;
+        feeds.scrollTo({ left: target * width, behavior: "auto" });
+        setPagerFrozen(true);
+        setActiveIndex(target);
+        scrollTopicIntoView(target);
+        return;
+      }
+    }
+
+    if (isAnimatingRef.current) return; // chip-tap reposition in flight
+    const index = Math.round(feeds.scrollLeft / width);
     if (index !== activeIndexRef.current) {
       setActiveIndex(index);
       scrollTopicIntoView(index);
@@ -644,18 +718,21 @@ export default function App() {
           </div>
         </div>
 
-        {/* Feed area */}
+        {/* Feed area — native scroll-snap for smooth, GPU-driven paging. Touch swipes are capped to
+            one page by scrollSnapStop: "always" below; trackpad swipes are capped by freezing
+            (pagerFrozen) the instant a page boundary is crossed, see handleFeedsScroll above. */}
         <div style={{ position: "absolute", top: feedTop, left: 0, right: 0, bottom: 0, transition: "top 0.25s ease", overflow: "hidden" }}>
           <div
             ref={feedsRef}
-            style={{ display: "flex", width: "100%", height: "100%", overflowX: "auto", scrollSnapType: "x mandatory", scrollbarWidth: "none", overscrollBehavior: "contain" }}
+            style={{ display: "flex", width: "100%", height: "100%", overflowX: pagerFrozen ? "hidden" : "auto", scrollSnapType: "x mandatory", scrollbarWidth: "none", overscrollBehavior: "contain" }}
             className="[&::-webkit-scrollbar]:hidden"
             onScroll={handleFeedsScroll}
+            onWheel={handleWheel}
           >
             {TOPICS.map((topic, i) => (
               <div
                 key={topic}
-                style={{ width: "100%", height: "100%", flexShrink: 0, scrollSnapAlign: "start", overflowY: "auto", overflowX: "hidden" }}
+                style={{ width: "100%", height: "100%", flexShrink: 0, scrollSnapAlign: "start", scrollSnapStop: "always", overflowY: "auto", overflowX: "hidden" }}
                 onScroll={(e) => handleFeedPaneScroll(e, i)}
               >
                 {topic === "Nieuws" ? <NieuwsFeed /> : <TopicFeed topicId={topic} />}
